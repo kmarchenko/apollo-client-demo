@@ -42,6 +42,12 @@ const cache = new InMemoryCache({
             return cartItemsVar();
           },
         },
+        // users: {
+        //   // merge: false,
+        //   merge(existing, incoming, { args }) {
+        //     return incoming;
+        //   },
+        // },
       },
     },
   },

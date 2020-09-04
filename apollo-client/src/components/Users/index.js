@@ -1,126 +1,85 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { Link } from 'react-router-dom';
 import { Table, Button } from 'react-bootstrap';
+import Pagination from 'react-bootstrap-4-pagination';
 import { useQuery, gql } from '@apollo/client';
 
 /** Components */
 import UserDelete from './Delete';
 
 const GET_USERS = gql`
-  query {
-    users {
-      id
-      name
-      posts {
+  query GetUsers($offset: Int, $limit: Int) {
+    users(offset: $offset, limit: $limit) {
+      items {
         id
+        name
+        posts {
+          id
+        }
       }
-    }
-  }
-`;
-
-const USER_CREATED_SUBSCRIPTION = gql`
-  subscription OnUserCreated {
-    onUserCreated {
-      id
-      name
-      posts {
-        id
-      }
+      offset
+      limit
+      totalCount
     }
   }
 `;
 
 function App() {
+  const LIMIT = 10;
+
   const {
-    data: { users = [] } = {},
+    data: {
+      users: {
+        items = [],
+        offset = 0,
+        totalCount = 0,
+      } = {},
+    } = {},
+    fetchMore,
     loading,
     error,
-    subscribeToMore,
-    client,
-  } = useQuery(GET_USERS);
-
-  useEffect(() => {
-    subscribeToMore({
-      document: USER_CREATED_SUBSCRIPTION,
-      updateQuery: (prev, { subscriptionData }) => {
-        if (!subscriptionData.data) return prev;
-        const newUser = subscriptionData.data.onUserCreated;
-        return { users: [...prev.users, newUser] };
-      },
-    });
-  }, [subscribeToMore]);
+  } = useQuery(GET_USERS, {
+    variables: {
+      offset: 0,
+      limit: LIMIT,
+    },
+    // fetchPolicy: 'cache-and-network',
+  });
 
   if (loading) return <p>Loading...</p>;
   if (error) return <p>Error! Something went wrong!</p>;
 
+  const paginationConfig = {
+    totalPages: (totalCount / LIMIT),
+    currentPage: (offset / LIMIT) + 1,
+    showMax: (totalCount / LIMIT),
+    size: 'sm',
+    threeDots: false,
+    prevNext: true,
+    circle: false,
+    onClick: page => {
+      console.log(page * LIMIT);
+      fetchMore({
+        variables: {
+          offset: (page - 1) * LIMIT,
+        },
+        updateQuery: (prev, { fetchMoreResult }) => {
+          if (!fetchMoreResult) return prev;
+          return fetchMoreResult;
+        },
+      });
+    },
+  };
+
   return (
     <div>
-      <Link component={Button} to="/users/create">Create user</Link>
-      <div style={{ marginTop: 10, marginBottom: 10 }}>
-        <Button
-          variant="primary"
-          onClick={() => {
-            const userId = prompt('Enter user id');
-            const userName = prompt('Enter new user name');
-
-            const query = gql`
-              query ReadUsers {
-                users {
-                  id
-                  name
-                }
-              }
-            `;
-
-            const { users } = client.readQuery({ query });
-
-            client.writeQuery({
-              query,
-              data: {
-                users: users.map(user => {
-                  if (user.id === userId) {
-                    return {
-                      ...user,
-                      name: userName,
-                    };
-                  }
-                  return user;
-                }),
-              },
-            });
-          }}
-        >
-          Write users to cache
-        </Button>
-        <Button
-          style={{ marginLeft: 10 }}
-          variant="primary"
-          onClick={() => {
-            const data = client.readQuery({
-              query: gql`
-                query ReadUsers {
-                  users {
-                    id
-                    name
-                  }
-                }
-              `,
-            });
-            console.log(data);
-          }}
-        >
-          Read users from cache
-        </Button>
-        <Button
-          style={{ marginLeft: 10 }}
-          variant="primary"
-          onClick={() => {
-            client.clearStore();
-          }}
-        >
-          Clear store
-        </Button>
-      </div>
+      <Link
+        style={{ marginBottom: 10 }}
+        component={Button}
+        to="/users/create"
+      >
+        Create user
+      </Link>
       <Table striped bordered hover size="sm">
         <thead>
           <tr>
@@ -131,7 +90,7 @@ function App() {
           </tr>
         </thead>
         <tbody>
-          {users.map(user => (
+          {items.map(user => (
             <tr key={user.id}>
               <td>
                 <Link to={`/user/${user.id}`}>{user.id}</Link>
@@ -145,6 +104,7 @@ function App() {
           ))}
         </tbody>
       </Table>
+      <Pagination {...paginationConfig} />
     </div>
   )
 }

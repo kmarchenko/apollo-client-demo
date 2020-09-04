@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import * as Chance from 'chance';
 import { v4 as uuidv4 } from 'uuid';
 import { User } from './user.model';
 import { CreateUserInput } from './dto/createUser.input';
@@ -8,6 +9,16 @@ import { DeleteUserInput } from './dto/deleteUser.input';
 @Injectable()
 export class UsersService {
   private users: User[] = [];
+
+  constructor() {
+    const chance = new Chance();
+    for (let i = 0; i < 100; i++) {
+      this.users.push({
+        id: uuidv4() as string,
+        name: chance.name(),
+      });
+    }
+  }
 
   create(data: CreateUserInput): User {
     const user = {
@@ -33,7 +44,10 @@ export class UsersService {
     return user;
   }
 
-  findAll(): User[] {
+  findAll(offset?: number, limit?: number): User[] {
+    if (offset >= 0 && limit > 0) {
+      return this.users.slice(offset, offset + limit);
+    }
     return this.users;
   }
 

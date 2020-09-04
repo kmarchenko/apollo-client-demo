@@ -17,6 +17,9 @@ import { DeleteUserInput } from './dto/deleteUser.input';
 import { PostsService } from '../posts/posts.service';
 import { Post } from '../posts/post.model';
 
+import { GetUsersArgs } from './dto/getUsers.args';
+import { PaginatedUsers } from './dto/paginatedUsers.dto';
+
 const pubsub = new PubSub();
 
 @Resolver(() => User)
@@ -26,9 +29,14 @@ export class UsersResolver {
     private readonly postsService: PostsService,
   ) {}
 
-  @Query(() => [User])
-  users(): User[] {
-    return this.usersService.findAll();
+  @Query(() => PaginatedUsers)
+  users(@Args() args: GetUsersArgs): PaginatedUsers {
+    return {
+      items: this.usersService.findAll(args.offset, args.limit),
+      offset: args.offset,
+      limit: args.limit,
+      totalCount: this.usersService.findAll().length,
+    };
   }
 
   @Query(() => User)
