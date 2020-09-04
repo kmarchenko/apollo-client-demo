@@ -49,28 +49,37 @@ export class UsersService {
     return this.users.length;
   }
 
-  findAll(before?: string, after?: string, limit = 10): any {
-    if (limit <= 0) limit = 1;
-    if (limit >= 100) limit = 100;
-    let items = this.users.slice(0, limit);
+  findAll(before?: string, after?: string, first = 10, last = 10): any {
+    if (first <= 0) first = 1;
+    if (first >= 100) first = 100;
+    if (last <= 0) last = 1;
+    if (last >= 100) last = 100;
+    let items = this.users.slice(0, first);
     if (before) {
       const decodedBefore = parseInt(Base64.decode(before));
-      const users = this.users.filter(user => parseInt(user.id) < decodedBefore);
-      items = users.slice(users.length - limit, users.length);
+      const users = this.users.filter(
+        user => parseInt(user.id) < decodedBefore,
+      );
+      items = users.slice(users.length - last, users.length);
     } else if (after) {
       const decodedAfter = parseInt(Base64.decode(after));
       const users = this.users.filter(user => parseInt(user.id) > decodedAfter);
-      items = users.slice(0, limit);
+      items = users.slice(0, first);
     }
     const hasPrev = items.length && items[0].id !== this.users[0].id;
-    const hasNext = items.length && items[items.length - 1].id !== this.users[this.users.length - 1].id;
+    const hasNext =
+      items.length &&
+      items[items.length - 1].id !== this.users[this.users.length - 1].id;
     return {
-      items,
-      cursor: {
-        before: hasPrev ? Base64.encode(items[0].id) : null,
-        after:  hasNext ? Base64.encode(items[items.length - 1].id) : null,
-        hasPrev,
-        hasNext,
+      edges: items.map(item => ({
+        node: item,
+        cursor: Base64.encode(item.id),
+      })),
+      pageInfo: {
+        startCursor: Base64.encode(hasPrev ? items[0].id : this.users[0].id),
+        endCursor: Base64.encode(hasNext ? items[items.length - 1].id : this.users[this.users.length - 1].id),
+        hasPreviousPage: hasPrev,
+        hasNextPage: hasNext,
       },
     };
   }

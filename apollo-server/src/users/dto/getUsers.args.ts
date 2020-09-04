@@ -1,5 +1,17 @@
-import { ArgsType } from '@nestjs/graphql';
-import { PaginationArgs } from '../../common/pagination/pagination.args';
+import { Field, Int } from '@nestjs/graphql';
+import { ConnectionFilterArgsType } from 'nestjs-graphql-pagination';
 
-@ArgsType()
-export class GetUsersArgs extends PaginationArgs {}
+@ConnectionFilterArgsType()
+export class GetUsersArgs {
+  @Field(() => Int, { nullable: true })
+  first: number;
+
+  @Field({ nullable: true })
+  after: string;
+
+  @Field(() => Int, { nullable: true })
+  last: number;
+
+  @Field({ nullable: true })
+  before: string;
+}

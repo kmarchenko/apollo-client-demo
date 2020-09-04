@@ -18,7 +18,7 @@ import { PostsService } from '../posts/posts.service';
 import { Post } from '../posts/post.model';
 
 import { GetUsersArgs } from './dto/getUsers.args';
-import { PaginatedUsers } from './dto/paginatedUsers.dto';
+import { UserConnection } from './dto/paginatedUsers.dto';
 
 const pubsub = new PubSub();
 
@@ -29,9 +29,14 @@ export class UsersResolver {
     private readonly postsService: PostsService,
   ) {}
 
-  @Query(() => PaginatedUsers)
-  users(@Args() args: GetUsersArgs): PaginatedUsers {
-    return this.usersService.findAll(args.before, args.after, args.limit);;
+  @Query(() => UserConnection)
+  users(@Args() args: GetUsersArgs): UserConnection {
+    return this.usersService.findAll(
+      args.before,
+      args.after,
+      args.first,
+      args.last,
+    );
   }
 
   @Query(() => User)

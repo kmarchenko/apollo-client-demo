@@ -7,20 +7,23 @@ import { useQuery, gql } from '@apollo/client';
 import UserDelete from './Delete';
 
 const GET_USERS = gql`
-  query GetUsers($before: String, $after: String, $limit: Int) {
-    users(before: $before, after: $after, limit: $limit) {
-      items {
-        id
-        name
-        posts {
+  query GetUsers($first: Int, $after: String, $last: Int, $before: String) {
+    users(first: $first, after: $after, last: $last, before: $before) {
+      edges {
+        node {
           id
+          name
+          posts {
+            id
+          }
         }
+        cursor
       }
-      cursor {
-        before
-        after
-        hasPrev
-        hasNext
+      pageInfo {
+        startCursor
+        endCursor
+        hasPreviousPage
+        hasNextPage
       }
     }
   }
@@ -32,12 +35,12 @@ function App() {
   const {
     data: {
       users: {
-        items = [],
-        cursor: {
-          before = null,
-          after = null,
-          hasPrev = false,
-          hasNext = false,
+        edges = [],
+        pageInfo: {
+          startCursor = null,
+          endCursor = null,
+          hasPreviousPage = false,
+          hasNextPage = false,
         } = {},
       } = {},
     } = {},
@@ -45,9 +48,8 @@ function App() {
     loading,
     error,
   } = useQuery(GET_USERS, {
-    variables: {
-      limit: LIMIT,
-    },
+    first: LIMIT,
+    last: LIMIT,
     // fetchPolicy: 'cache-and-network',
   });
 
@@ -73,7 +75,7 @@ function App() {
           </tr>
         </thead>
         <tbody>
-          {items.map(user => (
+          {edges.map(({ node: user }) => (
             <tr key={user.id}>
               <td>
                 <Link to={`/user/${user.id}`}>{user.id}</Link>
@@ -92,7 +94,7 @@ function App() {
           onClick={() => {
             fetchMore({
               variables: {
-                before,
+                before: startCursor,
               },
               updateQuery: (prev, { fetchMoreResult }) => {
                 if (!fetchMoreResult) return prev;
@@ -100,7 +102,7 @@ function App() {
               },
             });
           }}
-          disabled={!hasPrev}
+          disabled={!hasPreviousPage}
         >
           Prev
         </Button>
@@ -109,7 +111,7 @@ function App() {
           onClick={() => {
             fetchMore({
               variables: {
-                after,
+                after: endCursor,
               },
               updateQuery: (prev, { fetchMoreResult }) => {
                 if (!fetchMoreResult) return prev;
@@ -117,7 +119,7 @@ function App() {
               },
             });
           }}
-          disabled={!hasNext}
+          disabled={!hasNextPage}
         >
           Next
         </Button>
