@@ -31,12 +31,7 @@ export class UsersResolver {
 
   @Query(() => PaginatedUsers)
   users(@Args() args: GetUsersArgs): PaginatedUsers {
-    return {
-      items: this.usersService.findAll(args.offset, args.limit),
-      offset: args.offset,
-      limit: args.limit,
-      totalCount: this.usersService.findAll().length,
-    };
+    return this.usersService.findAll(args.before, args.after, args.limit);;
   }
 
   @Query(() => User)

@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import * as Chance from 'chance';
 import { v4 as uuidv4 } from 'uuid';
+import { Base64 } from 'js-base64';
 import { User } from './user.model';
 import { CreateUserInput } from './dto/createUser.input';
 import { UpdateUserInput } from './dto/updateUser.input';
@@ -14,7 +15,7 @@ export class UsersService {
     const chance = new Chance();
     for (let i = 0; i < 100; i++) {
       this.users.push({
-        id: uuidv4() as string,
+        id: (i + 1).toString(),
         name: chance.name(),
       });
     }
@@ -44,11 +45,34 @@ export class UsersService {
     return user;
   }
 
-  findAll(offset?: number, limit?: number): User[] {
-    if (offset >= 0 && limit > 0) {
-      return this.users.slice(offset, offset + limit);
+  getUsersCount() {
+    return this.users.length;
+  }
+
+  findAll(before?: string, after?: string, limit = 10): any {
+    if (limit <= 0) limit = 1;
+    if (limit >= 100) limit = 100;
+    let items = this.users.slice(0, limit);
+    if (before) {
+      const decodedBefore = parseInt(Base64.decode(before));
+      const users = this.users.filter(user => parseInt(user.id) < decodedBefore);
+      items = users.slice(users.length - limit, users.length);
+    } else if (after) {
+      const decodedAfter = parseInt(Base64.decode(after));
+      const users = this.users.filter(user => parseInt(user.id) > decodedAfter);
+      items = users.slice(0, limit);
     }
-    return this.users;
+    const hasPrev = items.length && items[0].id !== this.users[0].id;
+    const hasNext = items.length && items[items.length - 1].id !== this.users[this.users.length - 1].id;
+    return {
+      items,
+      cursor: {
+        before: hasPrev ? Base64.encode(items[0].id) : null,
+        after:  hasNext ? Base64.encode(items[items.length - 1].id) : null,
+        hasPrev,
+        hasNext,
+      },
+    };
   }
 
   findById(id: string): User {

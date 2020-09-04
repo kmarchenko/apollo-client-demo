@@ -1,15 +1,14 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Table, Button } from 'react-bootstrap';
-import Pagination from 'react-bootstrap-4-pagination';
 import { useQuery, gql } from '@apollo/client';
 
 /** Components */
 import UserDelete from './Delete';
 
 const GET_USERS = gql`
-  query GetUsers($offset: Int, $limit: Int) {
-    users(offset: $offset, limit: $limit) {
+  query GetUsers($before: String, $after: String, $limit: Int) {
+    users(before: $before, after: $after, limit: $limit) {
       items {
         id
         name
@@ -17,9 +16,12 @@ const GET_USERS = gql`
           id
         }
       }
-      offset
-      limit
-      totalCount
+      cursor {
+        before
+        after
+        hasPrev
+        hasNext
+      }
     }
   }
 `;
@@ -31,8 +33,12 @@ function App() {
     data: {
       users: {
         items = [],
-        offset = 0,
-        totalCount = 0,
+        cursor: {
+          before = null,
+          after = null,
+          hasPrev = false,
+          hasNext = false,
+        } = {},
       } = {},
     } = {},
     fetchMore,
@@ -40,7 +46,6 @@ function App() {
     error,
   } = useQuery(GET_USERS, {
     variables: {
-      offset: 0,
       limit: LIMIT,
     },
     // fetchPolicy: 'cache-and-network',
@@ -48,28 +53,6 @@ function App() {
 
   if (loading) return <p>Loading...</p>;
   if (error) return <p>Error! Something went wrong!</p>;
-
-  const paginationConfig = {
-    totalPages: (totalCount / LIMIT),
-    currentPage: (offset / LIMIT) + 1,
-    showMax: (totalCount / LIMIT),
-    size: 'sm',
-    threeDots: false,
-    prevNext: true,
-    circle: false,
-    onClick: page => {
-      console.log(page * LIMIT);
-      fetchMore({
-        variables: {
-          offset: (page - 1) * LIMIT,
-        },
-        updateQuery: (prev, { fetchMoreResult }) => {
-          if (!fetchMoreResult) return prev;
-          return fetchMoreResult;
-        },
-      });
-    },
-  };
 
   return (
     <div>
@@ -104,7 +87,41 @@ function App() {
           ))}
         </tbody>
       </Table>
-      <Pagination {...paginationConfig} />
+      <div>
+        <Button
+          onClick={() => {
+            fetchMore({
+              variables: {
+                before,
+              },
+              updateQuery: (prev, { fetchMoreResult }) => {
+                if (!fetchMoreResult) return prev;
+                return fetchMoreResult;
+              },
+            });
+          }}
+          disabled={!hasPrev}
+        >
+          Prev
+        </Button>
+        <Button
+          style={{ marginLeft: 10 }}
+          onClick={() => {
+            fetchMore({
+              variables: {
+                after,
+              },
+              updateQuery: (prev, { fetchMoreResult }) => {
+                if (!fetchMoreResult) return prev;
+                return fetchMoreResult;
+              },
+            });
+          }}
+          disabled={!hasNext}
+        >
+          Next
+        </Button>
+      </div>
     </div>
   )
 }
