@@ -3,6 +3,7 @@ import {
   InMemoryCache,
   HttpLink,
   split,
+  makeVar,
 } from '@apollo/client';
 import { getMainDefinition } from '@apollo/client/utilities';
 import { WebSocketLink } from '@apollo/client/link/ws';
@@ -30,7 +31,21 @@ const splitLink = split(
   httpLink,
 );
 
-const cache = new InMemoryCache();
+export const cartItemsVar = makeVar([]);
+
+const cache = new InMemoryCache({
+  typePolicies: {
+    Query: {
+      fields: {
+        cartItems: {
+          read() {
+            return cartItemsVar();
+          },
+        },
+      },
+    },
+  },
+});
 
 const client = new ApolloClient({
   link: splitLink,

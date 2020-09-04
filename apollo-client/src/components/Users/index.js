@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Table } from 'react-bootstrap';
+import { Table, Button } from 'react-bootstrap';
 import { useQuery, gql } from '@apollo/client';
 
 /** Components */
@@ -36,6 +36,7 @@ function App() {
     loading,
     error,
     subscribeToMore,
+    client,
   } = useQuery(GET_USERS);
 
   useEffect(() => {
@@ -54,7 +55,72 @@ function App() {
 
   return (
     <div>
-      <Link to="/users/create">Create user</Link>
+      <Link component={Button} to="/users/create">Create user</Link>
+      <div style={{ marginTop: 10, marginBottom: 10 }}>
+        <Button
+          variant="primary"
+          onClick={() => {
+            const userId = prompt('Enter user id');
+            const userName = prompt('Enter new user name');
+
+            const query = gql`
+              query ReadUsers {
+                users {
+                  id
+                  name
+                }
+              }
+            `;
+
+            const { users } = client.readQuery({ query });
+
+            client.writeQuery({
+              query,
+              data: {
+                users: users.map(user => {
+                  if (user.id === userId) {
+                    return {
+                      ...user,
+                      name: userName,
+                    };
+                  }
+                  return user;
+                }),
+              },
+            });
+          }}
+        >
+          Write users to cache
+        </Button>
+        <Button
+          style={{ marginLeft: 10 }}
+          variant="primary"
+          onClick={() => {
+            const data = client.readQuery({
+              query: gql`
+                query ReadUsers {
+                  users {
+                    id
+                    name
+                  }
+                }
+              `,
+            });
+            console.log(data);
+          }}
+        >
+          Read users from cache
+        </Button>
+        <Button
+          style={{ marginLeft: 10 }}
+          variant="primary"
+          onClick={() => {
+            client.clearStore();
+          }}
+        >
+          Clear store
+        </Button>
+      </div>
       <Table striped bordered hover size="sm">
         <thead>
           <tr>
